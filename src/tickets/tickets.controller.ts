@@ -7,6 +7,7 @@ import {
   TicketType,
 } from '../../db/models/Ticket';
 import { User, UserRole } from '../../db/models/User';
+import { Op } from 'sequelize';
 
 interface newTicketDto {
   type: TicketType;
@@ -38,6 +39,28 @@ export class TicketsController {
       if (existing) {
         throw new ConflictException('A registrationAddressChange ticket already exists for this company.',);
       }
+    }
+
+    if (type == TicketType.strikeOff) {
+      const directors = await User.findAll({
+        where: { companyId, role: UserRole.director },
+        order: [['createdAt', 'DESC']],
+      });
+
+      if (directors.length === 0) {
+        throw new ConflictException('No Director found for this company.');
+      }
+
+      if (directors.length > 1) {
+        throw new ConflictException('Multiple Directors found. Cannot create a strikeOff ticket.');
+      }
+
+      await Ticket.update(
+        { status: TicketStatus.resolved },
+        { where: { companyId, status: { [Op.ne]: TicketStatus.resolved } } }
+      );
+
+      return this.createTicket(companyId, directors[0].id, TicketCategory.management, type);
     }
 
     const category =
