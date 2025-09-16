@@ -1,6 +1,6 @@
 import { InjectQueue } from "@nestjs/bullmq";
 import { Injectable } from "@nestjs/common";
-import { Queue } from "bullmq";
+import { Queue, Job } from "bullmq";
 import { CreateTicketDto } from "./dto/create-ticket.dto";
 
 @Injectable()
@@ -12,19 +12,17 @@ export class TicketsQueueService {
     ) {}
 
     async enqueueCreateTicket(createTicketDto: CreateTicketDto) {
-        return this.ticketsQueue.add(
-            'create-ticket', 
-            createTicketDto,
-            {
-                attempts: 3,
-                backoff: {
-                    type: 'exponential',
-                    delay: 2000,
-                },
-                removeOnComplete: true,
-                removeOnFail: false,
-            },
-        );
+        const job: Job = await this.ticketsQueue.add('create-ticket', createTicketDto, {
+            removeOnComplete: true, 
+            removeOnFail: false, 
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 2000 },
+        });
+
+        return {
+            jobId: job.id,
+            status: 'queued',
+        };
     }
 
     async getJobStatus(jobId: string) {
@@ -34,12 +32,12 @@ export class TicketsQueueService {
         }
 
         const state = await job.getState();
+        const result = await job.returnvalue;
 
         return {
-            id: job.id,
-            name: job.name,
+            jobId: job.id,
             state,
-            returnValue: job.returnvalue,
+            result,
             failedReason: job.failedReason,
         };
     }

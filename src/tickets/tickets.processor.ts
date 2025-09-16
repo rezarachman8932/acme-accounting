@@ -18,7 +18,8 @@ export class TicketsProcessor extends WorkerHost {
         this.logger.log(`Processing job ${job.id} with data: ${JSON.stringify(job.data)}`);
 
         try {
-            const ticket = await this.ticketService.createTicketFromDto(job.data);
+            const dto = job.data as CreateTicketDto;
+            const ticket = await this.ticketService.createTicketFromDto(dto);
             this.logger.log(`Job ${job.id} completed successfully (ticketId=${ticket.id})`);
             return ticket;
         } catch (error) {

@@ -1,12 +1,10 @@
-import { Injectable, ConflictException, NotFoundException } from "@nestjs/common";
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-
-import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Ticket, TicketCategory, TicketStatus, TicketType } from "db/models/Ticket";
-import { User, UserRole } from "db/models/User";
-import { Company } from "db/models/Company";
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { Ticket, TicketCategory, TicketStatus, TicketType } from 'db/models/Ticket';
+import { User, UserRole } from 'db/models/User';
+import { Company } from 'db/models/Company';
 import { getTicketCategory } from '../utils/tickets.helper';
 
 interface TicketDto {
@@ -22,14 +20,14 @@ interface TicketDto {
 export class TicketService {
 
     constructor(
-        @InjectRepository(Ticket)
-        private readonly ticketRepository: Repository<Ticket>,
+        @InjectModel(Ticket)
+        private readonly ticketModel: typeof Ticket,
 
-        @InjectRepository(User)
-        private readonly userRepository: Repository<User>,
+        @InjectModel(User)
+        private readonly userModel: typeof User,
 
-        @InjectRepository(Company)
-        private readonly companyRepository: Repository<Company>,
+        @InjectModel(Company)
+        private readonly companyModel: typeof Company,
     ) {}
 
     private async createTicket(
@@ -38,7 +36,7 @@ export class TicketService {
         category: TicketCategory,
         type: TicketType,
       ): Promise<TicketDto> {
-        const ticket = await Ticket.create({
+        const ticket = await this.ticketModel.create({
           companyId,
           assigneeId,
           category,
@@ -52,7 +50,7 @@ export class TicketService {
           status: ticket.status,
           category: ticket.category,
           companyId: ticket.companyId,
-        }
+        };
       }
 
     async createTicketFromDto(dto: CreateTicketDto): Promise<TicketDto> {
@@ -60,7 +58,7 @@ export class TicketService {
         var assigneeId = 0;
 
         if (type == TicketType.registrationAddressChange) {
-            this.checkIfRegistrationAddressChange(companyId, type);
+            await this.checkIfRegistrationAddressChange(companyId, type);
 
             const secretaries = await this.findSecretaryRolesInCompany(companyId);
 
@@ -71,20 +69,20 @@ export class TicketService {
 
                 assigneeId = secretaries[0].id;
             } else {
-                const directors = this.findDirectorRolesInCompany(companyId, type);
+                const directors = await this.findDirectorRolesInCompany(companyId, type);
                 assigneeId = directors[0].id;
             }
         }
 
-        if (type == TicketType.strikeOff) {
-            const directors = this.findDirectorRolesInCompany(companyId, type);
+        if (type == TicketType.strikeOff) { 
+            const directors = await this.findDirectorRolesInCompany(companyId, type);
             assigneeId = directors[0].id;
 
-            this.resolveTicketStatus(companyId);
+            await this.resolveTicketStatus(companyId);
         }
 
         if (type == TicketType.managementReport) {
-            const accountants = this.findAccountantRolesInCompany(companyId);
+            const accountants = await this.findAccountantRolesInCompany(companyId);
             assigneeId = accountants[0].id;
         }
 
@@ -92,7 +90,7 @@ export class TicketService {
     }
 
     async checkIfRegistrationAddressChange(companyId: number, type: TicketType) {
-        const existingTicket = await this.ticketRepository.findOne({ where: { companyId, type } });
+        const existingTicket = await this.ticketModel.findOne({ where: { companyId, type } });
 
         if (!existingTicket) {
             throw new NotFoundException(`Ticket was not found!`);
@@ -104,16 +102,16 @@ export class TicketService {
     }
 
     async resolveTicketStatus(companyId: number) {
-        await this.ticketRepository.update(
+        await this.ticketModel.update(
             { status: TicketStatus.resolved },
-            { where: { companyId, status: { [Op.ne]: TicketStatus.resolved } } }
+            { where: { companyId, status: { [Op.ne]: TicketStatus.resolved } } },
         );
     }
 
     async findDirectorRolesInCompany(companyId: number, type: string): Promise<User[]> {
-        const directors = await this.userRepository.find({
-            where: { company: { id: companyId }, role: UserRole.director },
-            order: { createdAt: 'DESC' },
+        const directors = await this.userModel.findAll({
+            where: { companyId, role: UserRole.director },
+            order: [['createdAt', 'DESC']],
         });
 
         if (directors.length === 0) {
@@ -128,18 +126,16 @@ export class TicketService {
     }
 
     async findSecretaryRolesInCompany(companyId: number): Promise<User[]> {
-        const secretaries = await this.userRepository.find({
-            where: { company: { id: companyId }, role: UserRole.corporateSecretary },
-            order: { createdAt: 'DESC' },
+        return this.userModel.findAll({
+            where: { companyId, role: UserRole.corporateSecretary },
+            order: [['createdAt', 'DESC']],
         });
-
-        return secretaries;
     }
 
     async findAccountantRolesInCompany(companyId: number): Promise<User[]> {
-        const accountants = await this.userRepository.find({
-            where: { company: { id: companyId }, role: UserRole.accountant },
-            order: { createdAt: 'DESC' },
+        const accountants = await this.userModel.findAll({
+            where: { companyId, role: UserRole.accountant },
+            order: [['createdAt', 'DESC']],
         });
 
         if (!accountants.length) {

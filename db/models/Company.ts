@@ -7,17 +7,10 @@ import {
   AutoIncrement,
 } from 'sequelize-typescript';
 import { User } from './User';
-
-interface CompanyCreateProperties {
-  name: string;
-}
-
-interface CompanyProperties extends CompanyCreateProperties {
-  id: number;
-}
+import { Ticket } from './Ticket';
 
 @Table({ tableName: 'companies' })
-export class Company extends Model<CompanyProperties, CompanyCreateProperties> {
+export class Company extends Model {
   @AutoIncrement
   @PrimaryKey
   @Column

@@ -4,10 +4,15 @@ import { TicketsController } from "./tickets.controller";
 import { TicketsProcessor } from "./tickets.processor";
 import { TicketsQueueService } from "./tickets-queue.service";
 import { TicketService } from "./ticket.service";
+import { Ticket } from "db/models/Ticket";
+import { User } from "db/models/User";
+import { Company } from "db/models/Company";
+import { SequelizeModule } from "@nestjs/sequelize";
 
 @Module({
     imports: [
-        BullModule.registerQueue({ name: 'tickets-jobs' }),
+        SequelizeModule.forFeature([Ticket, User, Company]),
+        BullModule.registerQueue({name: 'tickets-jobs',}),
     ],
     controllers: [TicketsController],
     providers: [
@@ -15,5 +20,6 @@ import { TicketService } from "./ticket.service";
         TicketsProcessor,
         TicketService,
     ],
+    exports: [TicketService, TicketsQueueService],
 })
 export class TicketsModule {}
