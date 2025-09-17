@@ -1,5 +1,5 @@
-import { TicketCategory, TicketType } from "db/models/Ticket";
-import { IsUUID, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { TicketCategory, TicketType } from '../../../db/models/Ticket';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 
 export class CreateTicketDto {
     @IsNotEmpty()

@@ -2,14 +2,14 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { CreateTicketDto } from './dto/create-ticket.dto';
-import { Ticket, TicketCategory, TicketStatus, TicketType } from 'db/models/Ticket';
-import { User, UserRole } from 'db/models/User';
-import { Company } from 'db/models/Company';
+import { Ticket, TicketCategory, TicketStatus, TicketType } from '../../db/models/Ticket';
+import { User, UserRole } from '../../db/models/User';
+import { Company } from '../../db/models/Company';
 import { getTicketCategory } from '../utils/tickets.helper';
 
 interface TicketDto {
   id: number;
-  type: TicketType;
+  type: TicketType; 
   companyId: number;
   assigneeId: number;
   status: TicketStatus;
@@ -91,10 +91,6 @@ export class TicketService {
 
     async checkIfRegistrationAddressChange(companyId: number, type: TicketType) {
         const existingTicket = await this.ticketModel.findOne({ where: { companyId, type } });
-
-        if (!existingTicket) {
-            throw new NotFoundException(`Ticket was not found!`);
-        }
 
         if (existingTicket && type === TicketType.registrationAddressChange) {
             throw new ConflictException(`A ${type} ticket already exists for this company.`,);
