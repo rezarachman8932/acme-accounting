@@ -2,9 +2,9 @@
   "development": {
     "dialect": "postgres",
     "host": "localhost",
-    "port": 5590,
-    "username": "user",
-    "password": "password",
+    "port": 5432,
+    "username": "postgres",
+    "password": "root",
     "database": "task-dev"
   },
   "test": {

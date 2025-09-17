@@ -8,6 +8,7 @@ import {
   AutoIncrement,
 } from 'sequelize-typescript';
 import { Company } from './Company';
+import { Ticket } from './Ticket';
 
 export enum UserRole {
   accountant = 'accountant',
